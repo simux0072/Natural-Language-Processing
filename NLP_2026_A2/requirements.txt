@@ -1,0 +1,12 @@
+nltk
+gensim
+torch
+torchvision
+torchaudio
+spacy
+ipykernel
+matplotlib
+numpy
+requests
+
+#for A2 and A4
