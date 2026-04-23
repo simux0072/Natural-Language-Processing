@@ -1,3 +1,6 @@
+# Google Gemini was used to make the good looking tables.
+# I suck at making UIs so I asked Gemini to format my bad designs into something more appealing and easier to understand.
+
 import collections
 import re
 
