@@ -5,15 +5,17 @@ NLP A4 2023
 parser_model.py: Feed-Forward Neural Network for Dependency Parsing
 Authors: Sahil Chopra, Haoshen Hong, Nathan Schneider, Lucia Donatelli
 """
-import argparse
-import numpy as np
 
+import argparse
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 class ParserModel(nn.Module):
-    """ Feedforward neural network with an embedding layer and two hidden layers.
+    """Feedforward neural network with an embedding layer and two hidden layers.
     The ParserModel will predict which transition should be applied to a
     given partial parse configuration.
 
@@ -29,9 +31,11 @@ class ParserModel(nn.Module):
             in other ParserModel methods.
         - For further documentation on "nn.Module" please see https://pytorch.org/docs/stable/nn.html.
     """
-    def __init__(self, embeddings, n_features=36,
-        hidden_size=200, n_classes=3, dropout_prob=0.5):
-        """ Initialize the parser model.
+
+    def __init__(
+        self, embeddings, n_features=36, hidden_size=200, n_classes=3, dropout_prob=0.5
+    ):
+        """Initialize the parser model.
 
         @param embeddings (ndarray): word embeddings (num_words, embedding_size)
         @param n_features (int): number of input features
@@ -69,20 +73,33 @@ class ParserModel(nn.Module):
         ###     nn.Parameter: https://pytorch.org/docs/stable/nn.html#parameters
         ###     Initialization: https://pytorch.org/docs/stable/nn.init.html
         ###     Dropout: https://pytorch.org/docs/stable/nn.html#dropout-layers
-        ### 
+        ###
         ### See the PDF for hints.
 
+        self.embed_to_hidden_weight = nn.Parameter(
+            torch.empty(n_features * self.embed_size, hidden_size)
+        )
+        nn.init.xavier_uniform_(self.embed_to_hidden_weight)
 
+        self.embed_to_hidden_bias = nn.Parameter(torch.empty(hidden_size))
+        nn.init.uniform_(self.embed_to_hidden_bias)
 
+        self.dropout = nn.Dropout(p=dropout_prob)
+
+        self.hidden_to_logits_weight = nn.Parameter(torch.empty(hidden_size, n_classes))
+        nn.init.xavier_uniform_(self.hidden_to_logits_weight)
+
+        self.hidden_to_logits_bias = nn.Parameter(torch.empty(n_classes))
+        nn.init.uniform_(self.hidden_to_logits_bias)
 
         ### END YOUR CODE
 
     def embedding_lookup(self, w):
-        """ Utilize `w` to select embeddings from embedding matrix `self.embeddings`
-            @param w (Tensor): input tensor of word indices (batch_size, n_features)
+        """Utilize `w` to select embeddings from embedding matrix `self.embeddings`
+        @param w (Tensor): input tensor of word indices (batch_size, n_features)
 
-            @return x (Tensor): tensor of embeddings for words represented in w
-                                (batch_size, n_features * embed_size)
+        @return x (Tensor): tensor of embeddings for words represented in w
+                            (batch_size, n_features * embed_size)
         """
 
         ### YOUR CODE HERE (~1-4 Lines)
@@ -106,14 +123,13 @@ class ParserModel(nn.Module):
         ###     View: https://pytorch.org/docs/stable/tensors.html#torch.Tensor.view
         ###     Flatten: https://pytorch.org/docs/stable/generated/torch.flatten.html
 
-
-
         ### END YOUR CODE
+        x = self.embeddings[w]
+        x = x.view(w.shape[0], -1)
         return x
 
-
     def forward(self, w):
-        """ Run the model forward.
+        """Run the model forward.
 
             Note that we will not apply the softmax function here because it is included in the loss function nn.CrossEntropyLoss
 
@@ -143,16 +159,33 @@ class ParserModel(nn.Module):
         ###     Matrix product: https://pytorch.org/docs/stable/torch.html#torch.matmul
         ###     ReLU: https://pytorch.org/docs/stable/nn.html?highlight=relu#torch.nn.functional.relu
 
-
         ### END YOUR CODE
+        x = self.embedding_lookup(w)
+        h = F.relu(
+            torch.matmul(x, self.embed_to_hidden_weight) + self.embed_to_hidden_bias
+        )
+        h = self.dropout(h)
+        logits = (
+            torch.matmul(h, self.hidden_to_logits_weight) + self.hidden_to_logits_bias
+        )
+
         return logits
 
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='Simple sanity check for parser_model.py')
-    parser.add_argument('-e', '--embedding', action='store_true', help='sanity check for embeding_lookup function')
-    parser.add_argument('-f', '--forward', action='store_true', help='sanity check for forward function')
+    parser = argparse.ArgumentParser(
+        description="Simple sanity check for parser_model.py"
+    )
+    parser.add_argument(
+        "-e",
+        "--embedding",
+        action="store_true",
+        help="sanity check for embeding_lookup function",
+    )
+    parser.add_argument(
+        "-f", "--forward", action="store_true", help="sanity check for forward function"
+    )
     args = parser.parse_args()
 
     embeddings = np.zeros((100, 30), dtype=np.float32)
@@ -161,15 +194,22 @@ if __name__ == "__main__":
     def check_embedding():
         inds = torch.randint(0, 100, (4, 36), dtype=torch.long)
         selected = model.embedding_lookup(inds)
-        assert np.all(selected.data.numpy() == 0), "The result of embedding lookup: " \
-                                      + repr(selected) + " contains non-zero elements."
+        assert np.all(selected.data.numpy() == 0), (
+            "The result of embedding lookup: "
+            + repr(selected)
+            + " contains non-zero elements."
+        )
 
     def check_forward():
-        inputs =torch.randint(0, 100, (4, 36), dtype=torch.long)
+        inputs = torch.randint(0, 100, (4, 36), dtype=torch.long)
         out = model(inputs)
         expected_out_shape = (4, 3)
-        assert out.shape == expected_out_shape, "The result shape of forward is: " + repr(out.shape) + \
-                                                " which doesn't match expected " + repr(expected_out_shape)
+        assert out.shape == expected_out_shape, (
+            "The result shape of forward is: "
+            + repr(out.shape)
+            + " which doesn't match expected "
+            + repr(expected_out_shape)
+        )
 
     if args.embedding:
         check_embedding()
