@@ -20,6 +20,7 @@ from tqdm import tqdm
 from utils.parser_utils import AverageMeter, load_and_preprocess_data, minibatches
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cpu")
 print(f"Using device: {device}")
 
 parser = argparse.ArgumentParser(
@@ -173,9 +174,9 @@ if __name__ == "__main__":
         train_data,
         dev_data,
         output_path,
-        batch_size=1024,
-        n_epochs=10,
-        lr=0.0005,
+        batch_size=4096,
+        n_epochs=50,
+        lr=0.0001,
     )
 
     if not debug:
